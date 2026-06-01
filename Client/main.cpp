@@ -18,7 +18,7 @@
 void main()
 {
 	setlocale(LC_ALL, "");
-
+	std::cout << "CLIENT" << std::endl;
 	//1) Инициализация WinSOCK:
 	WSAData wsaData;
 	int iResult = 0;
@@ -59,9 +59,13 @@ void main()
 
 	//4) Подключаемся к узлу:
 	iResult = connect(connect_socket, target->ai_addr, target->ai_addrlen);
+	DWORD dwError = WSAGetLastError();
 	freeaddrinfo(target);
 	if (iResult == SOCKET_ERROR)
 	{
+		std::cout << "Error " << dwError << ":\t";
+		//WSAGetLastError в обязательном порядке должна быть вызвана непосредственно 
+		//после вызова функции, которая потенциально может выполнится с ошибкой.
 		std::cout << "Unable to connect to server" << std::endl;
 		closesocket(connect_socket);
 		//freeaddrinfo(target);

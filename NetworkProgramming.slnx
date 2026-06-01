@@ -3,5 +3,6 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="Client/Client.vcxproj" />
+  <Project Path="Client/Client.vcxproj" Id="262e556a-f6d7-4dc6-bacf-1a22c7a9a5e0" />
+  <Project Path="Server/Server.vcxproj" Id="c83b46ed-6c58-4a4f-b823-13cea913ebca" />
 </Solution>
