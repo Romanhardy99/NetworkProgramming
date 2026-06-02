@@ -15,10 +15,15 @@
 
 #define MTU 1500 //Maximum transfer unit - максимально возможный размер интернет-кадра
 
+CHAR* FormatLastError(DWORD dwError, CHAR szError[]);
+
 void main()
 {
 	setlocale(LC_ALL, "");
 	std::cout << "CLIENT" << std::endl;
+	DWORD dwError = 0;
+	CHAR szError[256] = {};
+
 	//1) Инициализация WinSOCK:
 	WSAData wsaData;
 	int iResult = 0;
@@ -47,11 +52,12 @@ void main()
 	//3) Создаем сокет:
 	//SOCKET - тип данных;
 	//socket() - это функция;
-	SOCKET connect_socket =
-		socket(target->ai_family, target->ai_socktype, target->ai_protocol);
+	SOCKET connect_socket = socket(target->ai_family, target->ai_socktype, target->ai_protocol);
+	dwError = WSAGetLastError();
 	if (connect_socket == INVALID_SOCKET)
 	{
 		std::cout << "SOCKET creation failed with error:\t" << WSAGetLastError() << std::endl;
+		std::cout << FormatLastError(dwError, szError) << std::endl;
 		freeaddrinfo(target);
 		WSACleanup();
 		return;
@@ -59,11 +65,13 @@ void main()
 
 	//4) Подключаемся к узлу:
 	iResult = connect(connect_socket, target->ai_addr, target->ai_addrlen);
-	DWORD dwError = WSAGetLastError();
+	dwError = WSAGetLastError();
 	freeaddrinfo(target);
 	if (iResult == SOCKET_ERROR)
 	{
-		std::cout << "Error " << dwError << ":\t";
+		//std::cout << "Error " << dwError << ":\t";
+		std::cout << FormatLastError(dwError, szError) << std::endl;
+
 		//WSAGetLastError в обязательном порядке должна быть вызвана непосредственно 
 		//после вызова функции, которая потенциально может выполнится с ошибкой.
 		std::cout << "Unable to connect to server" << std::endl;
@@ -77,9 +85,11 @@ void main()
 	//5) Отправка:
 	CHAR send_buffer[MTU] = "Hello Server";
 	iResult = send(connect_socket, send_buffer, strlen(send_buffer), 0);
+	dwError = WSAGetLastError();
 	if (iResult == SOCKET_ERROR)
 	{
 		std::cout << "Send failed with error: " << WSAGetLastError() << std::endl;
+		std::cout << FormatLastError(dwError, szError) << std::endl;
 		closesocket(connect_socket);
 		WSACleanup();
 		return;
@@ -90,18 +100,38 @@ void main()
 	do
 	{
 		iResult = recv(connect_socket, recv_buffer, MTU, 0);
+		dwError = WSAGetLastError();
 		if (iResult > 0)
 			std::cout << "Bytes received: " << iResult << "Message: " << recv_buffer << std::endl;
 		else if (iResult == 0) std::cout << "Connection closed" << std::endl;
-		else std::cout << "Receive failed with error " << WSAGetLastError() << std::endl;
+		else std::cout << "Receive failed with error " << FormatLastError(dwError, szError) << std::endl;
 
 	} while (iResult > 0);
 
 	iResult = shutdown(connect_socket, SD_BOTH);//Закрываем сокет на получение и отправку данных (разрываем TCP-соединение):
 	if (iResult == SOCKET_ERROR)
-		std::cout << "Shutdown failed with error " << WSAGetLastError() << std::endl;
+		std::cout << "Shutdown failed with " << FormatLastError(WSAGetLastError(), szError) << std::endl;
 
 	// ?) Освобождаем ресурсы WinSOCK
 	closesocket(connect_socket);
 	WSACleanup();
+}
+
+CHAR* FormatLastError(DWORD dwError, CHAR szError[])
+{
+	LPSTR lpError = NULL;
+	FormatMessage
+	(
+		FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+		NULL,
+		dwError,
+		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+		(LPSTR)&lpError,
+		0,
+		NULL
+	);
+	//strcpy(szError, lpError);
+	sprintf(szError, "Error %i: %s", dwError, lpError);
+	LocalFree(lpError);
+	return szError;
 }
