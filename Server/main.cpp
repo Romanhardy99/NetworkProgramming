@@ -8,6 +8,7 @@
 #include<WinSock2.h>
 #include<WS2tcpip.h>
 #include<iphlpapi.h>
+#include "FormatLastError.h"
 using namespace std;
 #pragma comment(lib, "WS2_32.lib")
 #define MTU 1500
@@ -38,7 +39,7 @@ void main()
 	iResult = getaddrinfo(NULL, "27015", &hints, &target);
 	if (iResult != 0)
 	{
-		cout << "getaddrinfo() failed with error: " << iResult << endl;
+		cout << "getaddrinfo() failed with error " << iResult << endl;
 		freeaddrinfo(target);
 		WSACleanup();
 		return;
@@ -48,7 +49,8 @@ void main()
 	SOCKET listen_socket = socket(target->ai_family, target->ai_socktype, target->ai_protocol);
 	if (listen_socket == INVALID_SOCKET)
 	{
-		cout << "SOCKET creation failed with error: " << WSAGetLastError() << endl;
+		int error = WSAGetLastError();
+		cout << "SOCKET creation failed with error " << error << ": " << FormatLastError(error) << endl;
 		freeaddrinfo(target);
 		WSACleanup();
 		return;
@@ -58,7 +60,8 @@ void main()
 	iResult = bind(listen_socket, target->ai_addr, target->ai_addrlen);
 	if (iResult != 0)
 	{
-		cout << "bind failed with error: " << WSAGetLastError() << endl;
+		int error = WSAGetLastError();
+		cout << "bind failed with error " << error<< ": " << FormatLastError(error) << endl;
 		freeaddrinfo(target);
 		closesocket(listen_socket);
 		WSACleanup();
@@ -68,7 +71,8 @@ void main()
 	//5)Запускание прослушивание порта:
 	if (listen(listen_socket, 1) == SOCKET_ERROR) // 1 - Максимальное кол-во одновременно подключенных клиентов
 	{
-		cout << "Listen failed with error: " << WSAGetLastError() << endl;
+		int error = WSAGetLastError();
+		cout << "Listen failed with error " << error << ": " << FormatLastError(error) << endl;
 		closesocket(listen_socket);
 		freeaddrinfo(target);
 		WSACleanup();
@@ -79,7 +83,8 @@ void main()
 	SOCKET client_socket = accept(listen_socket, NULL, NULL);
 	if (client_socket == INVALID_SOCKET)
 	{
-		cout << "Accept failed with error: " << WSAGetLastError() << endl;
+		int error = WSAGetLastError();
+		cout << "Accept failed with error " << error << ": " << FormatLastError(error) << endl;
 		closesocket(listen_socket);
 		freeaddrinfo(target);
 		WSACleanup();
@@ -100,7 +105,9 @@ void main()
 			iSentBytes = send(client_socket, send_buffer, strlen(send_buffer), 0);
 			if (iSentBytes == SOCKET_ERROR)
 			{
-				cout << "Send failed with error:\t" << WSAGetLastError() << endl;
+				int error = WSAGetLastError();
+
+				cout << "Send failed with error " << error  << ": " << FormatLastError(error) << endl;
 			}
 			else
 			{
@@ -113,7 +120,8 @@ void main()
 		}
 		else
 		{
-			cout << "Receive failed with error: " << WSAGetLastError() << endl;
+			int error = WSAGetLastError();
+			cout << "Receive failed with error " << error << ": " << FormatLastError(error) << endl;
 		}
 	} while (iReceivedBytes > 0);
 
@@ -121,10 +129,12 @@ void main()
 	iResult = shutdown(client_socket, SD_BOTH);
 	if (iResult == SOCKET_ERROR)
 	{
-		cout << "shutdown failed with error:\t" << WSAGetLastError();
+		int error = WSAGetLastError();
+		cout << "shutdown failed with error "<< error << ": " << FormatLastError(error) << endl;
 	}
 
 	//?) Освобождаем ресурсы, занятые WinSOCK
+	closesocket(client_socket);
 	closesocket(listen_socket);
 	freeaddrinfo(target);
 	WSACleanup();

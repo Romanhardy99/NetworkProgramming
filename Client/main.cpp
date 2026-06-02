@@ -10,6 +10,7 @@
 #include<WinSock2.h>
 #include<WS2tcpip.h>
 #include<iphlpapi.h>
+#include "FormatLastError.h"
 
 #pragma comment(lib, "WS2_32.lib") //Встраиваем статическую библиотеку, для заголовка <WS2_32.lib>
 
@@ -51,7 +52,8 @@ void main()
 		socket(target->ai_family, target->ai_socktype, target->ai_protocol);
 	if (connect_socket == INVALID_SOCKET)
 	{
-		std::cout << "SOCKET creation failed with error:\t" << WSAGetLastError() << std::endl;
+		int error = WSAGetLastError();
+		std::cout << "SOCKET creation failed with error " << error << ": " << FormatLastError(error) << std::endl;
 		freeaddrinfo(target);
 		WSACleanup();
 		return;
@@ -59,14 +61,13 @@ void main()
 
 	//4) Подключаемся к узлу:
 	iResult = connect(connect_socket, target->ai_addr, target->ai_addrlen);
-	DWORD dwError = WSAGetLastError();
 	freeaddrinfo(target);
 	if (iResult == SOCKET_ERROR)
 	{
-		std::cout << "Error " << dwError << ":\t";
+		int error = WSAGetLastError();
+		std::cout << "Connect failed with error " << error << ": " << FormatLastError(error) << std::endl;
 		//WSAGetLastError в обязательном порядке должна быть вызвана непосредственно 
 		//после вызова функции, которая потенциально может выполнится с ошибкой.
-		std::cout << "Unable to connect to server" << std::endl;
 		closesocket(connect_socket);
 		//freeaddrinfo(target);
 		WSACleanup();
@@ -79,7 +80,8 @@ void main()
 	iResult = send(connect_socket, send_buffer, strlen(send_buffer), 0);
 	if (iResult == SOCKET_ERROR)
 	{
-		std::cout << "Send failed with error: " << WSAGetLastError() << std::endl;
+		int error = WSAGetLastError();
+		std::cout << "Send failed with error: " << error << ": " << FormatLastError(error) << std::endl;
 		closesocket(connect_socket);
 		WSACleanup();
 		return;
@@ -93,13 +95,20 @@ void main()
 		if (iResult > 0)
 			std::cout << "Bytes received: " << iResult << "Message: " << recv_buffer << std::endl;
 		else if (iResult == 0) std::cout << "Connection closed" << std::endl;
-		else std::cout << "Receive failed with error " << WSAGetLastError() << std::endl;
+		else
+		{
+			int error = WSAGetLastError();
+			std::cout << "Receive failed with error " << error << ": " << FormatLastError(error) << std::endl;
+		}
 
 	} while (iResult > 0);
 
 	iResult = shutdown(connect_socket, SD_BOTH);//Закрываем сокет на получение и отправку данных (разрываем TCP-соединение):
 	if (iResult == SOCKET_ERROR)
-		std::cout << "Shutdown failed with error " << WSAGetLastError() << std::endl;
+	{
+		int error = WSAGetLastError();
+		std::cout << "Shutdown failed with error " << error << ": " << FormatLastError(error) << std::endl;
+	}
 
 	// ?) Освобождаем ресурсы WinSOCK
 	closesocket(connect_socket);
