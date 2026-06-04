@@ -17,6 +17,9 @@ void main()
 {
 	setlocale(LC_ALL, "");
 	cout << "SERVER" << endl;
+
+	CHAR szError[256] = {};
+
 	//1)Инициализация WinSOCK:
 	WSADATA wsaData;
 	INT iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -49,7 +52,7 @@ void main()
 	SOCKET listen_socket = socket(target->ai_family, target->ai_socktype, target->ai_protocol);
 	if (listen_socket == INVALID_SOCKET)
 	{
-		cout << "SOCKET creation failed with error: " << WSAGetLastError() << endl;
+		cout << "SOCKET creation failed with error: " << FormatLastError(WSAGetLastError(), szError) << endl;
 		freeaddrinfo(target);
 		WSACleanup();
 		return;
@@ -59,7 +62,7 @@ void main()
 	iResult = bind(listen_socket, target->ai_addr, target->ai_addrlen);
 	if (iResult != 0)
 	{
-		cout << "bind failed with error: " << WSAGetLastError() << endl;
+		cout << "bind failed with error: " << FormatLastError(WSAGetLastError(), szError) << endl;
 		freeaddrinfo(target);
 		closesocket(listen_socket);
 		WSACleanup();
@@ -69,7 +72,7 @@ void main()
 	//5)Запускание прослушивание порта:
 	if (listen(listen_socket, 1) == SOCKET_ERROR) // 1 - Максимальное кол-во одновременно подключенных клиентов
 	{
-		cout << "Listen failed with error: " << WSAGetLastError() << endl;
+		cout << "Listen failed with error: " << FormatLastError(WSAGetLastError(), szError) << endl;
 		closesocket(listen_socket);
 		freeaddrinfo(target);
 		WSACleanup();
@@ -80,7 +83,7 @@ void main()
 	SOCKET client_socket = accept(listen_socket, NULL, NULL);
 	if (client_socket == INVALID_SOCKET)
 	{
-		cout << "Accept failed with error: " << WSAGetLastError() << endl;
+		cout << "Accept failed with error: " << FormatLastError(WSAGetLastError(), szError) << endl;
 		closesocket(listen_socket);
 		freeaddrinfo(target);
 		WSACleanup();
@@ -101,7 +104,7 @@ void main()
 			iSentBytes = send(client_socket, send_buffer, strlen(send_buffer), 0);
 			if (iSentBytes == SOCKET_ERROR)
 			{
-				cout << "Send failed with error:\t" << WSAGetLastError() << endl;
+				cout << "Send failed with error:\t" << FormatLastError(WSAGetLastError(), szError) << endl;
 			}
 			else
 			{
@@ -114,7 +117,7 @@ void main()
 		}
 		else
 		{
-			cout << "Receive failed with error: " << WSAGetLastError() << endl;
+			cout << "Receive failed with error: " << FormatLastError(WSAGetLastError(), szError) << endl;
 		}
 	} while (iReceivedBytes > 0);
 
@@ -122,7 +125,7 @@ void main()
 	iResult = shutdown(client_socket, SD_BOTH);
 	if (iResult == SOCKET_ERROR)
 	{
-		cout << "shutdown failed with error:\t" << WSAGetLastError();
+		cout << "shutdown failed with error:\t" << FormatLastError(WSAGetLastError(), szError);
 	}
 
 	//?) Освобождаем ресурсы, занятые WinSOCK
