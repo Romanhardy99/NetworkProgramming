@@ -80,7 +80,11 @@ void main()
 	}
 
 	//6) Принимаем подключение от клиента
-	SOCKET client_socket = accept(listen_socket, NULL, NULL);
+	sockaddr_in client_addr;
+	int client_addr_size = sizeof(client_addr);
+	char ip[16];
+	SOCKET client_socket = accept(listen_socket, (sockaddr*)&client_addr, &client_addr_size);
+	//int port = ntohs(client_addr.sin_port);
 	if (client_socket == INVALID_SOCKET)
 	{
 		cout << "Accept failed with error: " << FormatLastError(WSAGetLastError(), szError) << endl;
@@ -89,6 +93,11 @@ void main()
 		WSACleanup();
 		return;
 	}
+
+	cout << "Client connected" << endl;
+	cout << "IP: " << inet_ntop(AF_INET, &client_addr.sin_addr, ip, sizeof(ip)) << endl;
+	cout << "Port: " << ntohs(client_addr.sin_port) << endl;
+
 	//7) Получем данные от клиента:
 	CHAR recv_buffer[MTU] = {};
 	CHAR send_buffer[MTU] = "Hello client";
@@ -102,6 +111,7 @@ void main()
 		{
 			cout << "Received " << iReceivedBytes << " " << recv_buffer << endl;
 			iSentBytes = send(client_socket, send_buffer, strlen(send_buffer), 0);
+			
 			if (iSentBytes == SOCKET_ERROR)
 			{
 				cout << "Send failed with error:\t" << FormatLastError(WSAGetLastError(), szError) << endl;
