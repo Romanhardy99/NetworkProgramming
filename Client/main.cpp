@@ -1,3 +1,4 @@
+﻿
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 //Если с библиотекой <WinSOCK2.h> подключается файл <Windows.h> или <IPhlAPI>,
@@ -17,7 +18,7 @@
 
 void main()
 {
-	setlocale(LC_ALL, "");
+	setlocale(LC_ALL, "Russian");
 	std::cout << "CLIENT" << std::endl;
 	DWORD dwError = 0;
 	CHAR szError[256] = {};
@@ -81,30 +82,39 @@ void main()
 	//freeaddrinfo(target);
 
 	//5) Отправка:
-	CHAR send_buffer[MTU] = "Hello Server";
-	iResult = send(connect_socket, send_buffer, strlen(send_buffer), 0);
-	dwError = WSAGetLastError();
-	if (iResult == SOCKET_ERROR)
-	{
-		std::cout << "Send failed with error: " << WSAGetLastError() << std::endl;
-		std::cout << FormatLastError(dwError, szError) << std::endl;
-		closesocket(connect_socket);
-		WSACleanup();
-		return;
-	}
-
-	//6) Получение данных:
-	CHAR recv_buffer[MTU] = {};
+		CHAR send_buffer[MTU] = "Privet Server";
 	do
 	{
-		iResult = recv(connect_socket, recv_buffer, MTU, 0);
+		iResult = send(connect_socket, send_buffer, strlen(send_buffer), 0);
 		dwError = WSAGetLastError();
-		if (iResult > 0)
-			std::cout << "Bytes received: " << iResult << "Message: " << recv_buffer << std::endl;
-		else if (iResult == 0) std::cout << "Connection closed" << std::endl;
-		else std::cout << "Receive failed with error " << FormatLastError(dwError, szError) << std::endl;
+		if (iResult == SOCKET_ERROR)
+		{
+			std::cout << "Send failed with error: " << WSAGetLastError() << std::endl;
+			std::cout << FormatLastError(dwError, szError) << std::endl;
+			closesocket(connect_socket);
+			WSACleanup();
+			return;
+		}
 
-	} while (iResult > 0);
+		//6) Получение данных:
+		CHAR recv_buffer[MTU] = {};
+		//do
+		{
+			iResult = recv(connect_socket, recv_buffer, MTU, 0);
+			dwError = WSAGetLastError();
+			if (iResult > 0)
+				std::cout << "Bytes received: " << iResult << "Message: " << recv_buffer << std::endl;
+			else if (iResult == 0) std::cout << "Connection closed" << std::endl;
+			else std::cout << "Receive failed with error " << FormatLastError(dwError, szError) << std::endl;
+
+		}// while (iResult > 0);
+		ZeroMemory(send_buffer, MTU);
+		ZeroMemory(recv_buffer, MTU);
+		std::cout << "Введите сообщение: ";
+		SetConsoleCP(1251);
+		std::cin.getline(send_buffer, MTU);
+		SetConsoleCP(866);
+	} while (strcmp(send_buffer, "exit") != 0);
 
 	iResult = shutdown(connect_socket, SD_BOTH);//Закрываем сокет на получение и отправку данных (разрываем TCP-соединение):
 	if (iResult == SOCKET_ERROR)

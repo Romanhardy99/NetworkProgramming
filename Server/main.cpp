@@ -1,4 +1,5 @@
 //Server
+//#define _WINSOCK_DEPRECATED_NO_WARNINGS
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
@@ -76,7 +77,9 @@ void main()
 	}
 
 	//6) Принимаем подключение от клиента
-	SOCKET client_socket = accept(listen_socket, NULL, NULL);
+	SOCKADDR_IN client_address;
+	INT client_address_len = sizeof(client_address);
+	SOCKET client_socket = accept(listen_socket, (SOCKADDR*) & client_address, &client_address_len);
 	if (client_socket == INVALID_SOCKET)
 	{
 		cout << "Accept failed with error: " << WSAGetLastError() << endl;
@@ -85,13 +88,16 @@ void main()
 		WSACleanup();
 		return;
 	}
+	CHAR sz_client_address[32];
+	cout << inet_ntop(AF_INET, &client_address.sin_addr, sz_client_address, 32) << ":" << ntohs(client_address.sin_port) << endl;
+
 	//7) Получем данные от клиента:
-	CHAR recv_buffer[MTU] = {};
 	CHAR send_buffer[MTU] = "Hello client";
 	INT iReceivedBytes = 0;
 	INT iSentBytes = 0;
 	do
 	{
+		CHAR recv_buffer[MTU] = {};
 		iReceivedBytes = recv(client_socket, recv_buffer, MTU, 0);
 		//Функция recv() - Receive ожидает получения данных по указаному сокету, И возвращает количество полученных байт.
 		if (iReceivedBytes > 0)
