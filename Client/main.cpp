@@ -39,7 +39,14 @@ void main()
 	hints.ai_family = AF_INET; //Стек протоколов TCP/IPv4
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_protocol = IPPROTO_TCP; //Определяем протокол транспортного уровня
-	iResult = getaddrinfo("127.0.0.1", "27015", &hints, &target);
+	char ip[16];
+	char port[6];
+	std::cout << "Enter IP address: ";
+	std::cin >> ip;
+	std::cout << "Enter port: ";
+	std::cin >> port;
+	
+	iResult = getaddrinfo(ip, port, &hints, &target); //"127.0.0.1", "27015"
 	if (iResult != 0)
 	{
 		std::cout << "getaddressinfo() failed with code " << iResult << std::endl;
