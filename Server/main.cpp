@@ -9,9 +9,21 @@
 #include<WinSock2.h>
 #include<WS2tcpip.h>
 #include<iphlpapi.h>
+#include"FormatLastError.h"
 using namespace std;
+
 #pragma comment(lib, "WS2_32.lib")
-#define MTU 1500
+
+#define MTU				 1500
+#define MAX_CONNECTIONS		3
+
+VOID ClientHandle(SOCKET client_socket);
+
+SOCKET client_sockets[MAX_CONNECTIONS] = {};
+DWORD dwThreadIDs[MAX_CONNECTIONS] = {}; //идентификаторы потоков 
+HANDLE hThreads[MAX_CONNECTIONS] = {}; //дескрипторы потоков
+
+INT g_ActiveClients = 0;
 
 void main()
 {
@@ -77,20 +89,50 @@ void main()
 	}
 
 	//6) Принимаем подключение от клиента
-	SOCKADDR_IN client_address;
-	INT client_address_len = sizeof(client_address);
-	SOCKET client_socket = accept(listen_socket, (SOCKADDR*) & client_address, &client_address_len);
-	if (client_socket == INVALID_SOCKET)
+	do
 	{
-		cout << "Accept failed with error: " << WSAGetLastError() << endl;
-		closesocket(listen_socket);
-		freeaddrinfo(target);
-		WSACleanup();
-		return;
-	}
-	CHAR sz_client_address[32];
-	cout << inet_ntop(AF_INET, &client_address.sin_addr, sz_client_address, 32) << ":" << ntohs(client_address.sin_port) << endl;
+		SOCKADDR_IN client_address;
+		INT client_address_len = sizeof(client_address);
+		SOCKET client_socket = accept(listen_socket, (SOCKADDR*) & client_address, &client_address_len);
+		if (client_socket == INVALID_SOCKET)
+		{
+			cout << "Accept failed with error: " << WSAGetLastError() << endl;
+			closesocket(listen_socket);
+			freeaddrinfo(target);
+			WSACleanup();
+			return;
+		}
+		CHAR sz_client_address[32];
+		cout << inet_ntop(AF_INET, &client_address.sin_addr, sz_client_address, 32) << ":" << ntohs(client_address.sin_port) << endl;
+		
+		//Получаем данные от клиента
+		//ClientHandle(client_socket);
+		client_sockets[g_ActiveClients] = client_socket;
+		hThreads[g_ActiveClients] = CreateThread
+		(
+			NULL, 
+			0,
+			(LPTHREAD_START_ROUTINE)ClientHandle,
+			(LPVOID)client_socket,
+			NULL,
+			&dwThreadIDs[g_ActiveClients]
+		);
+		g_ActiveClients++;
+	} while (true);
 
+	WaitForMultipleObjects(g_ActiveClients, hThreads, TRUE, INFINITE);
+
+	//9) Освобождаем ресурсы, занятые WinSOCK
+	closesocket(listen_socket);
+	freeaddrinfo(target);
+	WSACleanup();
+}
+
+VOID ClientHandle(SOCKET client_socket)
+{
+	INT iResult = 0;
+	DWORD dwError = 0;
+	CHAR szError[256] = {};
 	//7) Получем данные от клиента:
 	CHAR send_buffer[MTU] = "Hello client";
 	INT iReceivedBytes = 0;
@@ -125,13 +167,9 @@ void main()
 
 	//8) Разрываем TCP - соединение: 
 	iResult = shutdown(client_socket, SD_BOTH);
+	dwError = WSAGetLastError();
 	if (iResult == SOCKET_ERROR)
 	{
-		cout << "shutdown failed with error:\t" << WSAGetLastError();
+		cout << "shutdown failed with error:\t" << FormatLastError(dwError, szError);
 	}
-
-	//?) Освобождаем ресурсы, занятые WinSOCK
-	closesocket(listen_socket);
-	freeaddrinfo(target);
-	WSACleanup();
 }

@@ -118,7 +118,7 @@ void main()
 
 	iResult = shutdown(connect_socket, SD_BOTH);//Закрываем сокет на получение и отправку данных (разрываем TCP-соединение):
 	if (iResult == SOCKET_ERROR)
-		std::cout << "Shutdown failed with " << FormatLastError(WSAGetLastError(), szError) << std::endl;
+		std::cout << "Shutdown failed with " << FormatLastError(dwError, szError) << std::endl;
 
 	// ?) Освобождаем ресурсы WinSOCK
 	closesocket(connect_socket);
