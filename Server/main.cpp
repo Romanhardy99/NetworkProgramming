@@ -107,13 +107,13 @@ void main()
 		
 		//Получаем данные от клиента
 		//ClientHandle(client_socket);
-		client_sockets[g_ActiveClients] = client_socket;
+		client_sockets[g_ActiveClients] = client_socket; //сохраняем сокет подключаемого клиента
 		hThreads[g_ActiveClients] = CreateThread
 		(
-			NULL, 
-			0,
-			(LPTHREAD_START_ROUTINE)ClientHandle,
-			(LPVOID)client_socket,
+			NULL, //атрибут безопасности
+			0,    //размер стека создаваемого потока. 0 - совместно используется стек программы;
+			(LPTHREAD_START_ROUTINE)ClientHandle, //указатель на функцию, которая будет выполнятся в потоке; 
+			(LPVOID)client_socket, //Параметр, передавайемый в функцию. Функция, запускаемая в потоке должна принимать один и только один параметр.
 			NULL,
 			&dwThreadIDs[g_ActiveClients]
 		);
