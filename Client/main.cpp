@@ -1,9 +1,11 @@
+﻿
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
-//Если с библиотекой <WinSOCK2.h> подключается файл <Windows.h> или <IPhlAPI>,
+//Если с библиотекой <WinSOCK2.h> подключается файл <Windows.h> или <IPhlpAPI>,
 //то они тоже подключают файл <WinSOCK2.h>, что приводит к конфликтам.
-// Для того чтобы <Windows.h> и <IPhlpAPI.h> не подтягивали WinSOCK, создается макроопределение.
+//Для того чтобы <Windows.h> и <IPhlpAPI.h> не подтягивали WinSOCK, создается макроопределение.
 #endif // !WIN32_LEAN_AND_MEAN
+
 
 #include<iostream>
 #include<Windows.h>
@@ -11,9 +13,17 @@
 #include<WS2tcpip.h>
 #include<iphlpapi.h>
 #include<FormatLastError.h>
-#pragma comment(lib, "WS2_32.lib") //Встраиваем статическую библиотеку, для заголовка <WS2_32.lib>
+#include<Messages.h>
 
-#define MTU 1500 //Maximum transfer unit - максимально возможный размер интернет-кадра
+#pragma comment(lib, "WS2_32.lib")	//Встраиваем статическую библиотеку, для заголовка <WS2TCPIP.h>
+#pragma comment(lib, "FormatLastError.lib")
+
+#define MTU	1500	//Maximum Transfer Unit - Максимально-возможный размер Ethernet-кадра
+
+CHAR send_buffer[MTU] = "Привет Server";
+CHAR recv_buffer[MTU] = {};
+
+VOID Receive(SOCKET connect_socket);
 
 void main()
 {
@@ -32,17 +42,18 @@ void main()
 		return;
 	}
 
-	// 2) Определяем параметры подключения:
-	addrinfo hints;
+	//2) Определяем параметры подключения:
+	addrinfo  hints;
 	addrinfo* target;
-	ZeroMemory(&hints, sizeof(hints)); //Обнуляем экземпляр структуры
-	hints.ai_family = AF_INET; //Стек протоколов TCP/IPv4
+	ZeroMemory(&hints, sizeof(hints));	//Обнуляем экземпляр стуктуры
+	hints.ai_family = AF_INET;			//Стек протоколов TCP/IPv4
 	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_protocol = IPPROTO_TCP; //Определяем протокол транспортного уровня
+	hints.ai_protocol = IPPROTO_TCP;	//Определяем протокол транспортного уровня
 	iResult = getaddrinfo("127.0.0.1", "27015", &hints, &target);
 	if (iResult != 0)
 	{
 		std::cout << "getaddressinfo() failed with code " << iResult << std::endl;
+		freeaddrinfo(target);
 		WSACleanup();
 		return;
 	}
@@ -54,7 +65,7 @@ void main()
 	dwError = WSAGetLastError();
 	if (connect_socket == INVALID_SOCKET)
 	{
-		std::cout << "SOCKET creation failed with error:\t" << WSAGetLastError() << std::endl;
+		std::cout << "SOCKET creation failed with error:\t" << dwError << std::endl;
 		std::cout << FormatLastError(dwError, szError) << std::endl;
 		freeaddrinfo(target);
 		WSACleanup();
@@ -67,11 +78,12 @@ void main()
 	freeaddrinfo(target);
 	if (iResult == SOCKET_ERROR)
 	{
-		//std::cout << "Error " << dwError << ":\t";
+		//cout << "Error " << dwError << ":\t";
 		std::cout << FormatLastError(dwError, szError) << std::endl;
+		//cout << lpError << endl;
 
-		//WSAGetLastError в обязательном порядке должна быть вызвана непосредственно 
-		//после вызова функции, которая потенциально может выполнится с ошибкой.
+		//	WSAGetLastError() в обязатенльном порядке должна быть вызвана непосредственно 
+		//	после вывоза функции, которая потенциально может выполниться с ошибкой.
 		std::cout << "Unable to connect to server" << std::endl;
 		closesocket(connect_socket);
 		//freeaddrinfo(target);
@@ -81,36 +93,62 @@ void main()
 	//freeaddrinfo(target);
 
 	//5) Отправка:
-	CHAR send_buffer[MTU] = "Hello Server";
-	iResult = send(connect_socket, send_buffer, strlen(send_buffer), 0);
-	dwError = WSAGetLastError();
-	if (iResult == SOCKET_ERROR)
+	//CHAR send_buffer[MTU] = "Привет Server";
+	//CHAR recv_buffer[MTU] = {};
+	DWORD dwThreadID = 0;
+	HANDLE hReceive = CreateThread
+	(
+		NULL,
+		NULL,
+		(LPTHREAD_START_ROUTINE)Receive,
+		(LPVOID)connect_socket,
+		NULL,
+		&dwThreadID
+	);
+	do
 	{
-		std::cout << "Send failed with error: " << WSAGetLastError() << std::endl;
-		std::cout << FormatLastError(dwError, szError) << std::endl;
-		closesocket(connect_socket);
-		WSACleanup();
-		return;
-	}
+		iResult = send(connect_socket, send_buffer, strlen(send_buffer), 0);
+		dwError = WSAGetLastError();
+		if (iResult == SOCKET_ERROR)
+		{
+			std::cout << "Send failed with error: " << WSAGetLastError() << std::endl;
+			std::cout << FormatLastError(dwError, szError) << std::endl;
+			closesocket(connect_socket);
+			WSACleanup();
+			return;
+		}
 
-	//6) Получение данных:
-	CHAR recv_buffer[MTU] = {};
+		//6) Получение данных:
+
+		ZeroMemory(send_buffer, MTU);
+		if (strcmp(recv_buffer, DECLINE_MESSAGE) != 0)	std::cout << "Введите сообщение: ";
+		else std::cout << "Для выхода нажмите 'Enter'" << std::endl;
+		SetConsoleCP(1251);
+		std::cin.getline(send_buffer, MTU);
+		SetConsoleCP(866);
+	} while (strcmp(send_buffer, "exit") != 0 && strcmp(recv_buffer, DECLINE_MESSAGE) != 0);//https://legacy.cplusplus.com/reference/cstring/strcmp/
+
+	iResult = shutdown(connect_socket, SD_BOTH);//Закрываем сокет на получение и отправку данных (разрываем TCP-соединение):
+	if (iResult == SOCKET_ERROR)
+		std::cout << "Shutdown failed with " << FormatLastError(WSAGetLastError(), szError) << std::endl;
+	//7) Освобождаем ресурсы WinSOCK:
+	closesocket(connect_socket);
+	WSACleanup();
+}
+VOID Receive(SOCKET connect_socket)
+{
+	INT iResult = 0;
+	DWORD dwError = 0;
+	CHAR szError[256] = {};
+	ZeroMemory(recv_buffer, MTU);
 	do
 	{
 		iResult = recv(connect_socket, recv_buffer, MTU, 0);
 		dwError = WSAGetLastError();
 		if (iResult > 0)
 			std::cout << "Bytes received: " << iResult << "Message: " << recv_buffer << std::endl;
-		else if (iResult == 0) std::cout << "Connection closed" << std::endl;
-		else std::cout << "Receive failed with error " << FormatLastError(dwError, szError) << std::endl;
+		else if (iResult == 0)std::cout << "Connection closed" << std::endl;
+		else std::cout << "Receive failed with " << FormatLastError(dwError, szError) << std::endl;
 
 	} while (iResult > 0);
-
-	iResult = shutdown(connect_socket, SD_BOTH);//Закрываем сокет на получение и отправку данных (разрываем TCP-соединение):
-	if (iResult == SOCKET_ERROR)
-		std::cout << "Shutdown failed with " << FormatLastError(WSAGetLastError(), szError) << std::endl;
-
-	// ?) Освобождаем ресурсы WinSOCK
-	closesocket(connect_socket);
-	WSACleanup();
 }
