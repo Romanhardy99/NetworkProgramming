@@ -6,4 +6,5 @@
   <Project Path="Client/Client.vcxproj" Id="262e556a-f6d7-4dc6-bacf-1a22c7a9a5e0" />
   <Project Path="FormatLastError/FormatLastError.vcxproj" Id="c768d1b8-778a-427d-8b73-f55b8f9ca06d" />
   <Project Path="Server/Server.vcxproj" Id="c83b46ed-6c58-4a4f-b823-13cea913ebca" />
+  <Project Path="Threads/Threads.vcxproj" Id="3a89f28b-189a-414b-a7a1-15f42222079f" />
 </Solution>

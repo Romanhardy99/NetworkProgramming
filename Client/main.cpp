@@ -12,6 +12,7 @@
 #include<WS2tcpip.h>
 #include<iphlpapi.h>
 #include<FormatLastError.h>
+#include<Messages.h>
 #pragma comment(lib, "WS2_32.lib") //Встраиваем статическую библиотеку, для заголовка <WS2_32.lib>
 
 #define MTU 1500 //Maximum transfer unit - максимально возможный размер интернет-кадра
@@ -109,8 +110,9 @@ void main()
 
 		}// while (iResult > 0);
 		ZeroMemory(send_buffer, MTU);
-		ZeroMemory(recv_buffer, MTU);
-		std::cout << "Введите сообщение: ";
+		//ZeroMemory(recv_buffer, MTU);
+		if (strcmp(recv_buffer, DECLINE_MESSAGE) == 0) std::cout << "Введите сообщение: ";
+		else std::cout << "Для входа нажмите 'Enter: " << std::endl;
 		SetConsoleCP(1251);
 		std::cin.getline(send_buffer, MTU);
 		SetConsoleCP(866);
