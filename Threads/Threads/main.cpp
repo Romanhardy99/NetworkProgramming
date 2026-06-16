@@ -2,13 +2,15 @@
 #include<Windows.h>
 #include<thread>
 #include<chrono>
+#include<mutex>
 using std::cin;
 using std::cout;
 using std::endl;
 using namespace std::chrono_literals;
 
 bool finish = false;
-
+std::mutex mtx;
+HANDLE ghMutex = NULL;
 
 VOID Function()
 {
@@ -44,21 +46,32 @@ void Plus()
 {
 	while (!finish)
 	{
+		//mtx.lock();
+		WaitForSingleObject(ghMutex, INFINITE);
 		cout << "+ ";
-		std::this_thread::sleep_for(100ms);
+		Sleep(10);
+		ReleaseMutex(ghMutex);
+		//std::this_thread::sleep_for(100ms);
+		//mtx.unlick();
 	}
 }
 void Minus()
 {
 	while (!finish)
 	{
+		//mtx.lock();
+		WaitForSingleObject(ghMutex, INFINITE);
 		cout << "- ";
-		std::this_thread::sleep_for(100ms);
+		Sleep(10);
+		ReleaseMutex(ghMutex);
+		//std::this_thread::sleep_for(100ms);
+		//mtx.unlick();
 	}
 }
 
 //#define WINDOWS_THREADS_1
 //#define WINDOWS_THREADS_2
+//#define CPP_THREADS
 
 void main()
 {
@@ -96,8 +109,9 @@ void main()
 	WaitForSingleObject(hThread, INFINITE);
 #endif // WINDOWS_THREADS_2
 
+#ifdef CPP_THREADS
 	//Plus();
-	//Minus();
+//Minus();
 
 	std::thread plus_thread = std::thread(Plus);
 	std::thread minus_thread = std::thread(Minus);
@@ -105,6 +119,29 @@ void main()
 	cin.get();
 	finish = true;
 
-	if(plus_thread.joinable())plus_thread.join();
-	if(minus_thread.joinable())minus_thread.join();
+	if (plus_thread.joinable())plus_thread.join();
+	if (minus_thread.joinable())minus_thread.join();
+#endif // CPP_THREADS
+
+	ghMutex = CreateMutex(NULL, FALSE, NULL);
+	HANDLE hThreads[2] = {};
+	hThreads[0] = CreateThread
+	(
+		NULL,
+		NULL,
+		(LPTHREAD_START_ROUTINE)Plus,
+		NULL,
+		NULL,
+		0
+	);
+	hThreads[1] = CreateThread
+	(
+		NULL,
+		NULL,
+		(LPTHREAD_START_ROUTINE)Minus,
+		NULL,
+		NULL,
+		0
+	);
+	WaitForMultipleObjects(2, hThreads, TRUE, INFINITE);
 }
