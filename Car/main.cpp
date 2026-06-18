@@ -180,10 +180,11 @@ public:
 	}
 	void control()
 	{
-		char key = 0;
+		char key;
 		do
 		{
-			key = _getche(); // Функция _getch() ожидает нажатие клавиши и возвращает ASCI-код нажатой клавиши
+			key = 0; 
+			if(_kbhit())key = _getche(); // Функция _getch() ожидает нажатие клавиши и возвращает ASCI-код нажатой клавиши
 			switch (key)
 			{
 				case Enter:
@@ -204,13 +205,14 @@ public:
 				}
 				case 'I':
 				case 'i':
-					if (!engine.started())startup();
-					else get_in();
+					if (driver_inside && !engine.started())startup();
+					else if(driver_inside)shutdown();
 					break;
 				case Escape:
 					shutdown();
 					get_out();
 			}
+			if (tank.get_fuel_level() == 0 && engine.started())shutdown();
 		} while (key != Escape);
 	}
 
