@@ -132,19 +132,37 @@ public:
 	void panel()
 	{
 		HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+		CONSOLE_CURSOR_INFO cursor_info;
+		GetConsoleCursorInfo(hConsole, &cursor_info);
+		cursor_info.bVisible = FALSE;
+		SetConsoleCursorInfo(hConsole, &cursor_info);
+
+		CONSOLE_SCREEN_BUFFER_INFO current_state;
+		GetConsoleScreenBufferInfo(hConsole, &current_state);
+		system("CLS");
+
+
+		cout << "Fuel level:\t\t\tliters " << endl;
+		cout << "Engine is " << endl;
+
 		while (driver_inside)
 		{
-			system("CLS");
-			cout << "Fuel level: " << tank.get_fuel_level() << " liters.\t";
+			SetConsoleCursorPosition(hConsole, COORD{ 15,0 });
+			cout << tank.get_fuel_level();
+			//system("CLS");
+			//cout << "Fuel level: " << tank.get_fuel_level() << " liters.\t";
 			
 			if (tank.get_fuel_level() < 5)
 			{
+				SetConsoleCursorPosition(hConsole, COORD{ 32,0 });
 				SetConsoleTextAttribute(hConsole, 0x4F);
 				cout << "LOW FUEL";
 				SetConsoleTextAttribute(hConsole, 0x07);
 			}
-			cout << endl;
-			cout << "Engine is " << (engine.started() ? "started" : "stopped") << endl;
+			//cout << endl;
+			SetConsoleCursorPosition(hConsole, COORD{ 12,1 });
+			cout << (engine.started() ? "started" : "stopped");
+			//cout << "Engine is " << (engine.started() ? "started" : "stopped") << endl;
 			std::this_thread::sleep_for(100ms);
 		}
 	}
