@@ -1,8 +1,8 @@
+﻿#include<Windows.h>
 #include<iostream>
-#include<Windows.h>
-#include<thread>
+#include<thread>//Конкурентное выполнение
+#include<mutex>	//Mutual execution - взаимное выполнение
 #include<chrono>
-#include<mutex>
 using std::cin;
 using std::cout;
 using std::endl;
@@ -27,17 +27,15 @@ struct Point
 	int x;
 	int y;
 };
-
 VOID Collision(Point* point)
 {
 	while (point->x != point->y)
 	{
-		cout << "X = " << point->x++ << "\t = " << point->y-- << endl;
-		Sleep(10);
+		cout << "X = " << point->x++ << "\tY = " << point->y-- << endl;
+		//Sleep(5);
 	}
 }
-
-VOID Decrement(int* i)
+VOID Decrement(int i)
 {
 	while (i)cout << i-- << "\t";
 }
@@ -52,7 +50,7 @@ void Plus()
 		Sleep(10);
 		ReleaseMutex(ghMutex);
 		//std::this_thread::sleep_for(100ms);
-		//mtx.unlick();
+		//mtx.unlock();
 	}
 }
 void Minus()
@@ -65,7 +63,7 @@ void Minus()
 		Sleep(10);
 		ReleaseMutex(ghMutex);
 		//std::this_thread::sleep_for(100ms);
-		//mtx.unlick();
+		//mtx.unlock();
 	}
 }
 
@@ -76,6 +74,7 @@ void Minus()
 void main()
 {
 	setlocale(LC_ALL, "");
+
 #ifdef WINDOWS_THREADS_1
 	DWORD dwID = 0;
 	HANDLE hThread = CreateThread
@@ -94,7 +93,7 @@ void main()
 #endif // WINDOWS_THREADS_1
 
 #ifdef WINDOWS_THREADS_2
-	Point A(0, 100000);
+	Point A(0, 10000);
 	int i = 10000;
 	DWORD dwThreadID = 0;
 	HANDLE hThread = CreateThread
@@ -102,7 +101,8 @@ void main()
 		NULL,
 		NULL,
 		(LPTHREAD_START_ROUTINE)Decrement,
-		(LPVOID)i, //lpvoid - long pointer to void. void-pointer может хранить указатель на абсолютно любой тип данных.
+		(LPVOID)i,	//LPVOID - LongPointer to VOID.
+		//VOID-pointer может хранить указатель на абсолютно любой тип данных;
 		NULL,
 		&dwThreadID
 	);
@@ -111,16 +111,25 @@ void main()
 
 #ifdef CPP_THREADS
 	//Plus();
-//Minus();
+	//Minus();
 
 	std::thread plus_thread = std::thread(Plus);
 	std::thread minus_thread = std::thread(Minus);
 
+	cout << "Start" << endl;
 	cin.get();
 	finish = true;
+	cout << "Finish" << endl;
 
 	if (plus_thread.joinable())plus_thread.join();
 	if (minus_thread.joinable())minus_thread.join();
+
+	/*while (true)
+	{
+		cout << std::this_thread::get_id() << "\t";
+		std::this_thread::sleep_for(100ms);
+		Sleep(100);
+	}*/
 #endif // CPP_THREADS
 
 	ghMutex = CreateMutex(NULL, FALSE, NULL);
