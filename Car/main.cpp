@@ -1,37 +1,34 @@
-﻿
-#include<Windows.h>
+﻿﻿#include<Windows.h>
 #include<iostream>
 #include<conio.h>
 #include<thread>
 #include<mutex>
 #include<chrono>
-
 using namespace std::chrono_literals;
 using std::cin;
 using std::cout;
 using std::endl;
+
 #define Escape	27
 #define Enter	13
 
-#define MIN_TANK_CAPACITY	20
+#define MIN_TANK_CAPACITY	 20
 #define MAX_TANK_CAPACITY	120
 class Tank
 {
 	const int CAPACITY;
 	double fuel_level;
 public:
-	Tank(int capacity):
-		CAPACITY
-		(
-			capacity < MIN_TANK_CAPACITY ? MIN_TANK_CAPACITY :
-			capacity > MAX_TANK_CAPACITY ? MAX_TANK_CAPACITY :
-			capacity
-		)
+	Tank(int capacity) :CAPACITY
+	(
+		capacity < MIN_TANK_CAPACITY ? MIN_TANK_CAPACITY :
+		capacity > MAX_TANK_CAPACITY ? MAX_TANK_CAPACITY :
+		capacity
+	)
 	{
-
 		//this->CAPACITY = capacity;
 		this->fuel_level = 0;
-		cout << "Tank  is ready " << this << endl;
+		cout << "Tank is ready " << this << endl;
 	}
 	~Tank()
 	{
@@ -49,25 +46,25 @@ public:
 	}
 	double give_fuel(double amount)
 	{
-		if (amount < 0) return fuel_level;
+		if (amount < 0)return fuel_level;
 		fuel_level -= amount;
 		if (fuel_level < 0) fuel_level = 0;
 		return fuel_level;
 	}
+
 	void info()const
 	{
 		cout << "Capacity:\t" << CAPACITY << " liters.\n";
-		cout << "Fuel level:\t" << fuel_level << " leters.\n";
+		cout << "Fuel level:\t" << fuel_level << " liters.\n";
 	}
 };
 
-#define MIN_ENGINE_CONSUMPTION	4
-#define	MAX_ENGINE_CONSUMPTION	30
-
+#define MIN_ENGINE_CONSUMPTION	 4
+#define MAX_ENGINE_CONSUMPTION	30
 class Engine
 {
-	const double CONSUMPTION; //расход на 100км
-	double consumption_per_second; //расход за 1 секунду.
+	const double CONSUMPTION;		//Расход на 100км.
+	double consumption_per_second;	//Расход за 1 секунду.
 	bool is_started;
 public:
 	Engine(double consumption) :CONSUMPTION
@@ -77,9 +74,9 @@ public:
 		consumption
 	)
 	{
-		consumption_per_second = CONSUMPTION * 3e-5;
+		consumption_per_second = CONSUMPTION * 3e-5;	//3 * 10^(-5)
 		is_started = false;
-		cout << "Engine is ready:\t\t" << this << endl;
+		cout << "Engine is ready:\t" << this << endl;
 	}
 	~Engine()
 	{
@@ -93,27 +90,22 @@ public:
 	{
 		is_started = true;
 	}
-
 	void stop()
 	{
 		is_started = false;
 	}
-
 	bool started()const
 	{
 		return is_started;
 	}
-
 	void info()const
 	{
-		cout << "Consumption:\t\t\t" << CONSUMPTION << " literals/km.\n";
-		cout << "Consumption per sec:\t\t" << consumption_per_second << " liters/sec.\n";
+		cout << "Consumption:\t\t" << CONSUMPTION << " liters/km.\n";
+		cout << "Consumption per sec:\t" << consumption_per_second << " liters/sec.\n";
 	}
-		
 };
-#define MAX_SPEED_LOW_LIMIT		 60
-#define MAX_SPEED_HIGH_LIMIT	400
-
+#define MAX_SPEED_LOW_LIMIT			 60
+#define MAX_SPEED_HIGH_LIMIT		400
 class Car
 {
 	Engine engine;
@@ -122,16 +114,16 @@ class Car
 	const int MAX_SPEED;
 	int speed;
 	int acceleration;
-	struct 
+	struct
 	{
 		std::mutex mutex;
 		std::thread panel_thread;
-		std::thread engine_edle_thread;
+		std::thread engine_idle_thread;
 		std::thread free_wheeling_thread;
 	}car_threads;
 public:
-	Car(double consumption, int capacity = 50, int max_speed=250):
-		engine(consumption),
+	Car(double consumtion, int capacity = 50, int max_speed = 250) :
+		engine(consumtion),
 		tank(capacity),
 		MAX_SPEED
 		(
@@ -147,55 +139,7 @@ public:
 	}
 	~Car()
 	{
-		cout << "Car is over:\t\t\t\t\t " << this << endl;
-	}
-	void panel()
-	{
-		HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-		CONSOLE_CURSOR_INFO cursor_info;
-		GetConsoleCursorInfo(hConsole, &cursor_info);
-		cursor_info.bVisible = FALSE;
-		SetConsoleCursorInfo(hConsole, &cursor_info);
-
-		CONSOLE_SCREEN_BUFFER_INFO current_state;
-		GetConsoleScreenBufferInfo(hConsole, &current_state);
-		system("CLS");
-
-
-		cout << "Fuel level:\t\t\tliters " << endl;
-		cout << "Engine is " << endl;
-		cout << "Speed:\t\tkm/h." << endl;
-
-		while (driver_inside)
-		{
-			car_threads.mutex.lock();
-			SetConsoleCursorPosition(hConsole, COORD{ 15,0 });
-			cout << tank.get_fuel_level();
-			//system("CLS");
-			//cout << "Fuel level: " << tank.get_fuel_level() << " liters.\t";
-			
-			if (tank.get_fuel_level() < 5)
-			{
-				SetConsoleCursorPosition(hConsole, COORD{ 32,0 });
-				SetConsoleTextAttribute(hConsole, 0x4F);
-				cout << "LOW FUEL";
-				SetConsoleTextAttribute(hConsole, 0x07);
-			}
-			//cout << endl;
-			SetConsoleCursorPosition(hConsole, COORD{ 12,1 });
-			cout << (engine.started() ? "started" : "stopped");
-			SetConsoleCursorPosition(hConsole, COORD{ 8,2 });
-			cout.width(5);
-			//cout << std::left;
-			cout << speed;
-
-			//cout << "Engine is " << (engine.started() ? "started" : "stopped") << endl;
-			std::this_thread::sleep_for(100ms);
-			car_threads.mutex.unlock();
-		}
-		cursor_info.bVisible = TRUE;
-		//SetConsoleCursorInfo(hConsole, 0x07); //уточнить
-
+		cout << "Car is over:\t\t\t\t\t" << this << endl;
 	}
 	void get_in()
 	{
@@ -217,15 +161,15 @@ public:
 		if (tank.give_fuel(0))
 		{
 			engine.start();
-			if(!car_threads.engine_edle_thread.joinable())
-				car_threads.engine_edle_thread = std::thread(&Car::engine_idle, this);
+			if (!car_threads.engine_idle_thread.joinable())
+				car_threads.engine_idle_thread = std::thread(&Car::engine_idle, this);
 		}
 	}
 	void shutdown()
 	{
 		engine.stop();
-		if (car_threads.engine_edle_thread.joinable())
-			car_threads.engine_edle_thread.join();
+		if (car_threads.engine_idle_thread.joinable())
+			car_threads.engine_idle_thread.join();
 	}
 	void accelerate()
 	{
@@ -238,15 +182,6 @@ public:
 			std::this_thread::sleep_for(1s);
 		}
 	}
-	void free_wheeling()
-	{
-		while (speed > 0)
-		{
-			speed--;
-			//if (speed < 0)speed = 0;
-			std::this_thread::sleep_for(1s);
-		}
-	}
 	void slow_down()
 	{
 		if (speed > 0)
@@ -256,7 +191,6 @@ public:
 			if (speed == 0 && car_threads.free_wheeling_thread.joinable())
 				car_threads.free_wheeling_thread.join();
 			std::this_thread::sleep_for(1s);
-				//дописать
 		}
 	}
 	void control()
@@ -264,64 +198,118 @@ public:
 		char key;
 		do
 		{
-			key = 0; 
-			if(_kbhit())key = _getche(); // Функция _getch() ожидает нажатие клавиши и возвращает ASCI-код нажатой клавиши
+			key = 0;
+			if (_kbhit())	//Функция '_kbhit()' при нажатии любой клавиши возвращает 'true', в противном случае 'false'
+				key = _getch();	//Функция _getch() ожидает нажатия клавиши и возвращает ASCII-код нажатой клавиши.
 			switch (key)
 			{
-				case Enter:
+			case Enter:
+				if (driver_inside)get_out();
+				else get_in();
+				break;
+			case 'F':
+			case 'f':
+				car_threads.mutex.lock();
+				if (!driver_inside && !engine.started())
 				{
-					if (driver_inside) get_out();
-					else get_in();
-					break;
-				case 'F':
-				case 'f':
-					car_threads.mutex.lock();
-					if (!driver_inside && !engine.started())
-					{
-						double amount;
-						cout << "Введите объём топлива: "; cin >> amount;
-						tank.fill(amount);
-					}
-					else cout << "\nНужно заглушить двигатель и выйти из машины, у нас только самообслуживание" << endl;
-					car_threads.mutex.unlock();
-					break;
+					double amount;
+					cout << "Введите объем топлива: "; cin >> amount;
+					tank.fill(amount);
 				}
-				case 'I':
-				case 'i':
-					if (driver_inside && !engine.started())startup();
-					else if(driver_inside)shutdown();
-					break;
-				case 'W':
-				case'w':
-					accelerate();
-					break;
-				case 'S':
-				case's':
-					slow_down();
-					break;
-				case Escape:
-					speed = 0;
-					shutdown();
-					get_out();
+				else cout << "\nНужно заглушить двигатель и выйти из машины, нас только самообслуживание" << endl;
+				car_threads.mutex.unlock();
+				break;
+			case 'I':
+			case 'i':
+				if (driver_inside && !engine.started())startup();
+				else if (driver_inside)shutdown();
+				break;
+			case 'W':
+			case 'w':
+				accelerate();
+				break;
+			case 'S':
+			case 's':
+				slow_down();
+				break;
+			case Escape:
+				speed = 0;
+				shutdown();
+				get_out();
 			}
 			if (speed < 0)speed = 0;
 			if (speed == 0 && car_threads.free_wheeling_thread.joinable())car_threads.free_wheeling_thread.join();
 			if (tank.get_fuel_level() == 0 && engine.started())shutdown();
 		} while (key != Escape);
 	}
-
+	void free_wheeling()
+	{
+		while (speed > 0)
+		{
+			speed--;
+			//if (speed < 0)speed = 0;
+			std::this_thread::sleep_for(1s);
+		}
+	}
 	void engine_idle()
 	{
 		while (engine.started() && tank.give_fuel(engine.get_consumption_per_second()))
 			std::this_thread::sleep_for(1s);
 	}
+	void panel()
+	{
+		HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+		CONSOLE_CURSOR_INFO cursor_info;
+		GetConsoleCursorInfo(hConsole, &cursor_info);
+		cursor_info.bVisible = FALSE;
+		SetConsoleCursorInfo(hConsole, &cursor_info);
+
+		CONSOLE_SCREEN_BUFFER_INFO current_state;
+		GetConsoleScreenBufferInfo(hConsole, &current_state);
+		system("CLS");
+
+		cout << "Fuel level:\t    liters." << endl;
+		cout << "Engine is " << endl;
+		cout << "Speed:\t\tkm/h." << endl;
+
+		while (driver_inside)
+		{
+			car_threads.mutex.lock();
+			SetConsoleCursorPosition(hConsole, COORD{ 12, 0 });
+			cout << tank.get_fuel_level();
+			//system("CLS");
+			//cout << "Fuel level: " << tank.get_fuel_level() << " liters.\t";
+			if (tank.get_fuel_level() < 5)
+			{
+				SetConsoleCursorPosition(hConsole, COORD{ 32, 0 });
+				SetConsoleTextAttribute(hConsole, 0x4F);
+				cout << " LOW FUEL ";
+				SetConsoleTextAttribute(hConsole, 0x07);
+			}
+			//cout << endl;
+			SetConsoleCursorPosition(hConsole, COORD{ 12, 1 });
+			cout << (engine.started() ? "started" : "stopped");
+			SetConsoleCursorPosition(hConsole, COORD{ 8, 2 });
+			cout.width(5);
+			//cout << std::left;
+			cout << speed;
+
+			//cout << "Eigine is " << (engine.started() ? "started" : "stopped") << endl;
+			std::this_thread::sleep_for(100ms);
+			car_threads.mutex.unlock();
+		}
+		cursor_info.bVisible = TRUE;
+		SetConsoleCursorInfo(hConsole, &cursor_info);
+	}
 };
 
 //#define TANK_CHECK
-#define ENGINE_CHECK
+//#define ENGINE_CHECK
+
 void main()
 {
 	setlocale(LC_ALL, "");
+
 #ifdef TANK_CHECK
 	Tank tank(40);
 	int amount;
