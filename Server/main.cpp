@@ -27,6 +27,8 @@ DWORD  dwThreadIDs[MAX_CONNECTIONS] = {};		//Идентификаторы пот
 HANDLE hThreads[MAX_CONNECTIONS] = {};			//Дескрипторы потов
 
 INT g_ActiveClients = 0;
+HANDLE ghMutex = NULL;   // защита общих ресурсов: client_sockets[], g_ActiveClients, send()
+
 
 void main()
 {
@@ -116,6 +118,7 @@ void main()
 		//ClientHandle(client_socket);
 		if (g_ActiveClients < MAX_CONNECTIONS)
 		{
+			WaitForSingleObject(ghMutex, INFINITE);
 			client_sockets[g_ActiveClients] = client_socket;	//сохраняем сокет подключаемого клиента в массив
 			hThreads[g_ActiveClients] = CreateThread
 			(
@@ -129,6 +132,7 @@ void main()
 			);
 			g_ActiveClients++;
 			//ShowActiveClients();
+			ReleaseMutex(ghMutex);
 			Sleep(10);
 			cout << "Количество клиентов: " << g_ActiveClients << endl;
 		}
@@ -162,9 +166,10 @@ INT GetClientIndex(DWORD dwThreadID)
 }
 VOID Shift(INT index)
 {
-	if (index == -1)return;
+	if (index == -1) return;
+	WaitForSingleObject(ghMutex, INFINITE);
 	CloseHandle(hThreads[index]);
-	for (INT i = index; i < g_ActiveClients; i++)
+	for (INT i = index; i < g_ActiveClients - 1; i++)
 	{
 		client_sockets[i] = client_sockets[i + 1];
 		dwThreadIDs[i] = dwThreadIDs[i + 1];
@@ -174,6 +179,7 @@ VOID Shift(INT index)
 	dwThreadIDs[MAX_CONNECTIONS - 1] = NULL;
 	hThreads[MAX_CONNECTIONS - 1] = NULL;
 	g_ActiveClients--;
+	ReleaseMutex(ghMutex);
 	ShowActiveClients();
 	cout << "Количество клиентов: " << g_ActiveClients << endl;
 }
@@ -190,12 +196,13 @@ VOID ShowActiveClients()
 }
 VOID Broadcast(CHAR sz_message[], INT client_index)
 {
-	INT iResult = 0;
+	WaitForSingleObject(ghMutex, INFINITE);
 	for (INT i = 0; i < g_ActiveClients; i++)
 	{
 		if (i != client_index)
-			iResult = send(client_sockets[i], sz_message, strlen(sz_message), 0);
+			send(client_sockets[i], sz_message, strlen(sz_message), 0);
 	}
+	ReleaseMutex(ghMutex);
 }
 
 #ifdef THREADS
