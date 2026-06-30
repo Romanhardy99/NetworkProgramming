@@ -1,4 +1,4 @@
-﻿﻿#include<Windows.h>
+﻿#include<Windows.h>
 #include<iostream>
 #include<conio.h>
 #include<thread>
@@ -82,7 +82,7 @@ public:
 	{
 		cout << "Engine is over:\t" << this << endl;
 	}
-	double get_consumption_per_second()
+	double get_consumption_per_second() const
 	{
 		return consumption_per_second;
 	}
@@ -253,7 +253,7 @@ public:
 	}
 	void engine_idle()
 	{
-		while (engine.started() && tank.give_fuel(engine.get_consumption_per_second()))
+		while (engine.started() && tank.give_fuel(get_consumption_per_second()))
 			std::this_thread::sleep_for(1s);
 	}
 	void panel()
@@ -300,6 +300,15 @@ public:
 		}
 		cursor_info.bVisible = TRUE;
 		SetConsoleCursorInfo(hConsole, &cursor_info);
+	}
+	double get_consumption_per_second() const
+	{
+		if (speed <= 0)        return engine.get_consumption_per_second(); // холостой ход
+		else if (speed <= 60)  return 0.0020;
+		else if (speed <= 100) return 0.0014;
+		else if (speed <= 140) return 0.0020;
+		else if (speed <= 200) return 0.0025;
+		else                   return 0.0030;
 	}
 };
 
