@@ -1,4 +1,4 @@
-﻿//Server
+﻿﻿//Server
 //#define _WINSOCK_DEPRECATED_NO_WARNINGS
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -197,6 +197,8 @@ VOID Broadcast(CHAR sz_message[], INT client_index)
 			iResult = send(client_sockets[i], sz_message, strlen(sz_message), 0);
 	}
 }
+
+#ifdef THREADS
 VOID ClientHandle(SOCKET client_socket)
 {
 	INT iResult = 0;
@@ -229,6 +231,54 @@ VOID ClientHandle(SOCKET client_socket)
 	iResult = shutdown(client_socket, SD_BOTH);
 	dwError = WSAGetLastError();
 	if (iResult != SOCKET_ERROR)cout << "shutdown failed with error:\t" << FormatLastError(dwError, szError) << endl;
+	closesocket(client_socket);
+	Shift(GetClientIndex(GetCurrentThreadId()));
+	ExitThread(0);
+}
+#endif // THREADS
+
+
+VOID ClientHandle(SOCKET client_socket)
+{
+	INT iResult = 0;
+	DWORD dwError = 0;
+	CHAR szError[256] = {};
+	CHAR recv_buffer[MTU] = {};
+	INT iReceivedBytes = 0;
+	//------------------------------------------------------------------------------------
+	//Начало функции
+	SOCKADDR_IN client_address;
+	INT client_address_len = sizeof(client_address);
+	// В этой строке мы берем данные о клиенте с сокета
+	getpeername(client_socket, (SOCKADDR*)&client_address, &client_address_len);
+
+	CHAR sz_client_address[32] = {};
+	// С помощью этой строки мы преобразуем IP-адрес из двоичной формы в текст (строку)
+	inet_ntop(AF_INET, &client_address.sin_addr, sz_client_address, 32);
+	INT client_port = ntohs(client_address.sin_port);
+
+	//-----------------------------------------------------------------------------------
+	do
+	{
+		ZeroMemory(recv_buffer, MTU);
+		iReceivedBytes = recv(client_socket, recv_buffer, MTU - 1, 0); // MTU - 1, որ տեղ մնա \0-ի համար
+		dwError = WSAGetLastError();
+
+		if (iReceivedBytes > 0)
+		{
+			recv_buffer[iReceivedBytes] = '\0'; // Պարտադիր փակում ենք տողը
+
+			// Мы соединяем IP, порт и сообщение вместе с помощью этой строки
+			CHAR broadcast_buffer[MTU] = {};
+			sprintf_s(broadcast_buffer, "[%s:%d]: %s", sz_client_address, client_port, recv_buffer);
+
+			// Ուղարկում ենք բոլորին
+			Broadcast(broadcast_buffer, GetClientIndex(GetCurrentThreadId()));
+		}
+	} while (iReceivedBytes > 0 && strcmp(recv_buffer, "exit") != 0);
+
+	//8) Разрываем TCP-соединение:
+	iResult = shutdown(client_socket, SD_BOTH);
 	closesocket(client_socket);
 	Shift(GetClientIndex(GetCurrentThreadId()));
 	ExitThread(0);
